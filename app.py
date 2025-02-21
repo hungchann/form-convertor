@@ -4,6 +4,7 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 import pandas as pd
 import os
+from datetime import datetime
 
 # Alternative font setup using DejaVu (commonly available on Linux)
 def setup_font():
@@ -81,6 +82,60 @@ def export_pdf():
     except Exception as e:
         st.error(f"Error generating PDF: {str(e)}")
 
-# Export PDF button
-if st.button("Xuất PDF"):
-    export_pdf()
+def save_response():
+    # Create a dictionary with the response data
+    response_data = {
+        'PTID': ptid,
+        'Date': date,
+    }
+    
+    # Add all question responses
+    for i, (key, value) in enumerate(responses.items(), 1):
+        response_data[f'Question_{i}'] = value
+    
+    # Convert to DataFrame
+    df_new = pd.DataFrame([response_data])
+    
+    # File paths
+    csv_file = 'responses.csv'
+    excel_file = 'responses.xlsx'
+    
+    try:
+        # Handle CSV file
+        if os.path.exists(csv_file):
+            df_existing = pd.read_csv(csv_file)
+            df_updated = pd.concat([df_existing, df_new], ignore_index=True)
+        else:
+            df_updated = df_new
+        df_updated.to_csv(csv_file, index=False)
+        
+        # Try to save Excel file if openpyxl is available
+        try:
+            if os.path.exists(excel_file):
+                df_existing = pd.read_excel(excel_file)
+                df_updated = pd.concat([df_existing, df_new], ignore_index=True)
+            else:
+                df_updated = df_new
+            df_updated.to_excel(excel_file, index=False)
+        except ImportError:
+            st.warning("Excel export not available. Data saved to CSV only.")
+        
+        return True
+    except Exception as e:
+        st.error(f"Error saving response: {str(e)}")
+        return False
+
+# Export and Save buttons
+col1, col2 = st.columns(2)
+
+with col1:
+    if st.button("Xuất PDF"):
+        export_pdf()
+
+with col2:
+    if st.button("Lưu phản hồi"):
+        if ptid.strip() == "":
+            st.error("Vui lòng nhập PTID trước khi lưu")
+        else:
+            if save_response():
+                st.success("Đã lưu phản hồi thành công!")
